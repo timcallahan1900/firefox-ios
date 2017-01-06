@@ -107,7 +107,7 @@ private let log = Logger.syncLogger
  * We rely on SQLiteHistory having initialized the favicon table first.
  */
 public class BrowserTable: Table {
-    static let DefaultVersion = 19    // Bug 1303734.
+    static let DefaultVersion = 20    // Bug 1253656.
 
     // TableInfo fields.
     var name: String { return "BROWSER" }
@@ -336,6 +336,7 @@ public class BrowserTable: Table {
     ", mirror.title AS title" +
     ", mirror.description AS description" +
     ", mirror.bmkUri AS bmkUri" +
+    ", mirror.keyword AS keyword" +
     ", mirror.folderName AS folderName" +
     ", null AS faviconID" +
     ", 0 AS is_overridden" +
@@ -359,6 +360,7 @@ public class BrowserTable: Table {
     ", title" +
     ", description" +
     ", bmkUri" +
+    ", keyword" +
     ", folderName" +
     ", null AS faviconID" +
     ", 1 AS is_overridden" +
@@ -825,6 +827,14 @@ public class BrowserTable: Table {
             }
         }
 
+        if from < 20 && to >= 20 {
+            if !self.run(db, queries: [
+                "DROP VIEW IF EXISTS \(ViewBookmarksBufferOnMirror)",
+                self.bufferBookmarksView]) {
+                return false
+            }
+        }
+
         return true
     }
 
@@ -837,7 +847,7 @@ public class BrowserTable: Table {
         var pairs = Args()
         pairs.reserveCapacity(cursor.count * 2)
         for url in cursor {
-            if let url = url, host = url.asURL?.normalizedHost() {
+            if let url = url, host = url.asURL?.normalizedHost {
                 pairs.append(url)
                 pairs.append(host)
             }
